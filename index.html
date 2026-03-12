@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Push Test</title>
+  <link rel="manifest" href="manifest.json">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Push Test">
+</head>
+<body>
+  <h2>Push Notification Test</h2>
+  <button onclick="subscribe()">Subscribe</button>
+  <button onclick="send()">Send Push</button>
+  <pre id="log"></pre>
+
+  <script>
+    const VAPID_PUBLIC = 'BDtSkJzpBEd_SqVbjyrJuXhuONQDkNDHaQoPIuhn5Ep4hwkEq3Pf3rzx0wuEIfZfDSRmhmJtDdtmy9V0l1uBmeI';
+
+    let sub;
+
+    function log(msg) {
+      console.log(msg);
+      document.getElementById('log').textContent += msg + '\n';
+    }
+
+    async function subscribe() {
+      try {
+        if (!('serviceWorker' in navigator)) return alert('Service workers not supported');
+        if (!('PushManager' in window)) return alert('Push not supported in this browser');
+
+        log('Registering service worker...');
+        const reg = await navigator.serviceWorker.register('sw.js');
+        await navigator.serviceWorker.ready;
+        log('Service worker ready');
+
+        const perm = await Notification.requestPermission();
+        if (perm !== 'granted') return alert('Permission denied');
+        log('Notification permission granted');
+
+        sub = await reg.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC)
+        });
+        log('Push subscription created');
+
+        const res = await fetch('/subscribe', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(sub)
+        });
+
+        if (res.ok) {
+          log('Subscribed successfully!');
+          alert('Subscribed!');
+        } else {
+          log('Server error: ' + res.status);
+          alert('Server error: ' + res.status);
+        }
+      } catch (err) {
+        log('Error: ' + err.message);
+        alert('Error: ' + err.message);
+      }
+    }
+
+    async function send() {
+      try {
+        log('Sending push...');
+        const res = await fetch('/send', { method: 'POST' });
+        if (res.ok) {
+          log('Push sent!');
+          alert('Push sent!');
+        } else {
+          log('Send failed: ' + res.status);
+          alert('Send failed: ' + res.status);
+        }
+      } catch (err) {
+        log('Fetch error: ' + err.message);
+        alert('Fetch error: ' + err.message);
+      }
+    }
+
+    // Required conversion — raw VAPID key string won't work with pushManager.subscribe
+    function urlBase64ToUint8Array(base64String) {
+      const padding = '='.repeat((4 - base64String.length % 4) % 4);
+      const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+      const rawData = atob(base64);
+      return Uint8Array.from([...rawData].map(c => c.charCodeAt(0)));
+    }
+  </script>
+</body>
+</html>

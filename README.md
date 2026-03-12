@@ -22,3 +22,15 @@
 4. **Subscribe and test**
    - Tap **Subscribe** and allow notifications
    - Tap **Send Push** — you should receive a push notification
+
+
+
+index.html — the front-end with Subscribe and Send Push buttons, error logging, and PWA meta tags
+
+server.js — the Node/Express backend that handles subscriptions and sends pushes via web-push
+
+sw.js — the service worker that listens for push events and displays the notification
+
+manifest.json — makes the site installable as a PWA (required for iOS push support)
+
+package.json — lists express and web-push as dependencies
